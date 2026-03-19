@@ -41,15 +41,18 @@ else:
 final_video = video_clip.set_audio(audio_clip)
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac")
 
-# 5. Temporary server par upload karna (Test ke liye)
-print("Uploading final video...")
+# 5. Temporary server par upload karna (Catbox)
+print("Uploading final video to Catbox...")
 try:
-    files = {'file': open('final_video.mp4', 'rb')}
-    upload_res = requests.post("https://file.io/?expires=1w", files=files).json()
-    video_link = upload_res.get('link', 'File.io Error')
+    files = {
+        'reqtype': (None, 'fileupload'),
+        'fileToUpload': open('final_video.mp4', 'rb')
+    }
+    upload_res = requests.post("https://catbox.moe/user/api.php", files=files)
+    video_link = upload_res.text.strip()
 except Exception as e:
     print(f"Upload error: {e}")
-    video_link = "Upload Server Down"
+    video_link = "Upload Failed"
 
 # 6. N8N Webhook ko Success Message bhejna
 print("Pinging N8N...")
