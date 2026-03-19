@@ -23,9 +23,11 @@ jobs:
 
       - name: Run Python Engine
         env:
-          AUDIO_URL: ${{ github.event.client_payload.audio_url }}
-          SEARCH_KEYWORD: ${{ github.event.client_payload.search_keyword }}
-          CHAT_ID: ${{ github.event.client_payload.chat_id }}
-          WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        AUDIO_URL: ${{ github.event.client_payload.audio_url }}
+        SCENE_1: ${{ github.event.client_payload.scene_1 }}
+        SCENE_2: ${{ github.event.client_payload.scene_2 }}
+        SCENE_3: ${{ github.event.client_payload.scene_3 }}
+        CHAT_ID: ${{ github.event.client_payload.chat_id }}
+        WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+        PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: python render_video.py
