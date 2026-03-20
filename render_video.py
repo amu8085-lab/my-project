@@ -1,5 +1,5 @@
 import os, requests
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips, vfx
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips, vfx, afx
 
 # 1. N8N se aaye variables
 audio_url = os.environ.get('AUDIO_URL')
@@ -7,7 +7,6 @@ chat_id = os.environ.get('CHAT_ID')
 webhook_url = os.environ.get('WEBHOOK_URL')
 pexels_key = os.environ.get('PEXELS_API_KEY')
 
-# Ab 3 scenes ke keywords aayenge
 keywords = [
     os.environ.get('SCENE_1', 'nature'),
     os.environ.get('SCENE_2', 'city view'),
@@ -22,7 +21,7 @@ with open("voiceover.mp3", "wb") as f:
     f.write(requests.get(audio_url).content)
 
 voiceover = AudioFileClip("voiceover.mp3")
-clip_duration = voiceover.duration / 3 # Har video kitni der chalegi
+clip_duration = voiceover.duration / 3 
 
 # 3. Pexels se 3 Videos Download aur Process karna
 print("Downloading and processing videos from Pexels...")
@@ -38,11 +37,9 @@ for i, kw in enumerate(keywords):
         with open(vid_path, "wb") as f:
             f.write(requests.get(video_url).content)
             
-        # Video ko sahi size aur time ka banana
         clip = VideoFileClip(vid_path).subclip(0, clip_duration)
-        clip = clip.resize(height=1920, width=1080) # YouTube Shorts size
+        clip = clip.resize(height=1920, width=1080) 
         
-        # Pehle clip ko chhodkar baki me crossfade effect dalna
         if i > 0:
             clip = clip.crossfadein(1.0) 
             
@@ -55,17 +52,18 @@ print("Stitching videos with effects...")
 final_video = concatenate_videoclips(video_clips, padding=-1.0, method="compose")
 
 # 5. Background Music (BGM) Mix karna
-# Note: Repo me 'bgm.mp3' naam ki ek file pehle se honi chahiye!
+print("Adding BGM...")
 try:
-    bgm = AudioFileClip("bgm.mp3").fx(vfx.volumex, 0.1) # BGM volume 10%
+    # Yahan audio effects (afx) lagaye gaye hain
+    bgm = AudioFileClip("bgm.mp3").volumex(0.1) # BGM volume 10%
     if bgm.duration < voiceover.duration:
-        bgm = bgm.fx(vfx.loop, duration=voiceover.duration)
+        bgm = afx.audio_loop(bgm, duration=voiceover.duration)
     else:
         bgm = bgm.subclip(0, voiceover.duration)
         
     final_audio = CompositeAudioClip([voiceover, bgm])
-except:
-    print("bgm.mp3 not found, using only voiceover.")
+except Exception as e:
+    print(f"BGM Error: {e}")
     final_audio = voiceover
 
 final_video = final_video.set_audio(final_audio)
