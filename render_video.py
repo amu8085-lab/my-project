@@ -54,7 +54,6 @@ final_video = concatenate_videoclips(video_clips, padding=-1.0, method="compose"
 # 5. Background Music (BGM) Mix karna
 print("Adding BGM...")
 try:
-    # Yahan audio effects (afx) lagaye gaye hain
     bgm = AudioFileClip("bgm.mp3").volumex(0.1) # BGM volume 10%
     if bgm.duration < voiceover.duration:
         bgm = afx.audio_loop(bgm, duration=voiceover.duration)
@@ -81,8 +80,13 @@ try:
 except Exception as e:
     video_link = "Upload Failed"
 
-# 7. N8N ko success bhejna
+# 7. N8N ko success bhejna (with Safety Net)
+print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
 print("Pinging N8N...")
 payload = {"chat_id": chat_id, "message": "🎬 Bhai! Tumhari PRO video ready hai!", "youtube_url": video_link}
-requests.post(webhook_url, json=payload)
-print("Done!")
+try:
+    requests.post(webhook_url, json=payload, timeout=15)
+    print("Done! Message sent to n8n.")
+except Exception as e:
+    print(f"Warning: n8n server is unreachable right now. Error: {e}")
+    print("But don't worry, the video is fully created! Use the Catbox link above.")
