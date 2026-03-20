@@ -19,7 +19,7 @@ jobs:
 
       - name: Install Libraries
         run: |
-          pip install requests moviepy==1.0.3
+          pip install requests moviepy==1.0.3 Pillow==9.5.0
 
       - name: Run Python Engine
         env:
