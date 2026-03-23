@@ -28,8 +28,7 @@ try:
 except:
     whoosh_sfx = pop_sfx = None
 
-# Viral Colors Array
-viral_colors = ['#FFD400', '#00FFFF', '#FFFFFF', '#39FF14'] # Gold, Cyan, White, Neon Green
+viral_colors = ['#FFD400', '#00FFFF', '#FFFFFF', '#39FF14'] 
 
 # 2. Process Each Scene
 for i, scene in enumerate(scenes_data):
@@ -46,16 +45,16 @@ for i, scene in enumerate(scenes_data):
         with open(vid_path, "wb") as f:
             f.write(requests.get(video_url).content)
             
-        # Smart Crop & Zoom
+        # THE FIX: STRICT CANVAS LOCK AND CENTER ZOOM
         clip = VideoFileClip(vid_path).subclip(0, scene_duration)
-        clip = clip.resize(height=1920).crop(x_center=clip.w/2, width=1080)
-        clip = clip.resize(lambda t: 1.0 + 0.05 * (t / scene_duration))
+        clip = clip.resize(height=1920)
         
-        # --- NEW: Cinematic Dark Overlay (Ensures text is ALWAYS readable) ---
-        dark_overlay = ColorClip(size=(1080, 1920), color=(0,0,0)).set_opacity(0.35).set_duration(scene_duration)
-        clip = CompositeVideoClip([clip, dark_overlay])
+        # Zoom apply kiya aur usko forcefully Center mein lock kar diya
+        zoomed_clip = clip.resize(lambda t: 1.0 + 0.05 * (t / scene_duration)).set_position(('center', 'center'))
         
-        # Fast Text Chunking
+        # Dark overlay ko bhi center lock kiya
+        dark_overlay = ColorClip(size=(1080, 1920), color=(0,0,0)).set_opacity(0.35).set_position(('center', 'center')).set_duration(scene_duration)
+        
         words = text_line.split(' ')
         chunk_size = 3 
         chunks = [' '.join(words[j:j + chunk_size]) for j in range(0, len(words), chunk_size)]
@@ -64,14 +63,16 @@ for i, scene in enumerate(scenes_data):
         duration_per_chunk = scene_duration / len(chunks)
         
         for w_i, chunk in enumerate(chunks):
-            # NEW: Alternating Colors
             current_color = viral_colors[w_i % len(viral_colors)]
             
-            main_txt = TextClip(chunk, fontsize=120, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=8, method='caption', size=(950, None))
+            # Thoda font size 110 kiya taaki fit aaram se aaye
+            main_txt = TextClip(chunk, fontsize=110, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=7, method='caption', size=(950, None))
             txt_pos = main_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
             word_clips.append(txt_pos)
         
-        final_scene = CompositeVideoClip([clip] + word_clips).set_duration(scene_duration)
+        # --- THE CRITICAL FIX: Add `size=(1080, 1920)` to force strict YouTube Shorts frame ---
+        final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(1080, 1920)).set_duration(scene_duration)
+        
         if i > 0: final_scene = final_scene.crossfadein(0.3)
             
         video_clips.append(final_scene)
@@ -111,7 +112,7 @@ except: video_link = "Upload Failed"
 
 # Notify Telegram
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
-payload = {"chat_id": chat_id, "message": "👑 Bhai! 1000/10 GOD-TIER Viral Video Ready! (Dark Overlay + Multi-Color Text) 🔥", "youtube_url": video_link}
+payload = {"chat_id": chat_id, "message": "👑 Bhai! The PERFECT 1000/10 Video Ready! (Fixed Center Canvas) 🔥", "youtube_url": video_link}
 
 try:
     requests.post(webhook_url, json=payload, timeout=15)
