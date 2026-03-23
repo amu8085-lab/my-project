@@ -24,11 +24,11 @@ jobs:
           sudo sed -i 's/<policy domain="path" rights="none" pattern="@\*"//g' /etc/ImageMagick-6/policy.xml
 
       - name: Install Libraries
-        run: pip install requests moviepy==1.0.3 Pillow==9.5.0
+        run: pip install requests moviepy==1.0.3 Pillow==9.5.0 edge-tts
 
       - name: Run Python Engine
         env:
-          AUDIO_URL: ${{ github.event.client_payload.audio_url }}
+          FULL_TEXT: ${{ github.event.client_payload.full_text }}
           SCENES_DATA: ${{ github.event.client_payload.scenes_data }}
           CHAT_ID: ${{ github.event.client_payload.chat_id }}
           WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
