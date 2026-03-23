@@ -29,6 +29,7 @@ except:
     whoosh_sfx = pop_sfx = None
 
 viral_colors = ['#FFD400', '#00FFFF', '#FFFFFF', '#39FF14'] 
+TARGET_W, TARGET_H = 1080, 1920
 
 # 2. Process Each Scene
 for i, scene in enumerate(scenes_data):
@@ -45,18 +46,26 @@ for i, scene in enumerate(scenes_data):
         with open(vid_path, "wb") as f:
             f.write(requests.get(video_url).content)
             
-        # THE FIX: STRICT CANVAS LOCK AND CENTER ZOOM
+        # --- THE 2000/10 FIX: BULLETPROOF CROP & SCALE ---
         clip = VideoFileClip(vid_path).subclip(0, scene_duration)
-        clip = clip.resize(height=1920)
         
-        # Zoom apply kiya aur usko forcefully Center mein lock kar diya
-        zoomed_clip = clip.resize(lambda t: 1.0 + 0.05 * (t / scene_duration)).set_position(('center', 'center'))
+        # Force height to 1920
+        clip = clip.resize(height=TARGET_H)
+        # Force width if it's too narrow
+        if clip.w < TARGET_W:
+            clip = clip.resize(width=TARGET_W)
+        # PERFECT Center Crop
+        clip = clip.crop(x_center=clip.w/2, y_center=clip.h/2, width=TARGET_W, height=TARGET_H)
         
-        # Dark overlay ko bhi center lock kiya
-        dark_overlay = ColorClip(size=(1080, 1920), color=(0,0,0)).set_opacity(0.35).set_position(('center', 'center')).set_duration(scene_duration)
+        # Smooth Ken Burns Zoom
+        zoomed_clip = clip.resize(lambda t: 1.0 + 0.04 * (t / scene_duration)).set_position(('center', 'center'))
+        
+        # Premium Dark Overlay
+        dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.3).set_position(('center', 'center')).set_duration(scene_duration)
         
         words = text_line.split(' ')
-        chunk_size = 3 
+        # 2000/10 PACING: Strictly 2 words per pop
+        chunk_size = 2 
         chunks = [' '.join(words[j:j + chunk_size]) for j in range(0, len(words), chunk_size)]
         
         word_clips = []
@@ -65,13 +74,20 @@ for i, scene in enumerate(scenes_data):
         for w_i, chunk in enumerate(chunks):
             current_color = viral_colors[w_i % len(viral_colors)]
             
-            # Thoda font size 110 kiya taaki fit aaram se aaye
-            main_txt = TextClip(chunk, fontsize=110, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=7, method='caption', size=(950, None))
+            # --- THE 3D SHADOW EFFECT ---
+            # Pehle ek kaala (black) text banaya aur thoda neeche/right shift kiya
+            shadow_txt = TextClip(chunk, fontsize=130, color='black', font=HINDI_FONT_FILE, method='caption', size=(950, None))
+            shadow_txt = shadow_txt.set_position(('center', 'center')).margin(top=10, left=10, opacity=0).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
+            
+            # Fir main coloured text uske theek upar rakha
+            main_txt = TextClip(chunk, fontsize=130, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=6, method='caption', size=(950, None))
             txt_pos = main_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
-            word_clips.append(txt_pos)
+            
+            # Dono ko merge kar diya
+            word_clips.extend([shadow_txt, txt_pos])
         
-        # --- THE CRITICAL FIX: Add `size=(1080, 1920)` to force strict YouTube Shorts frame ---
-        final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(1080, 1920)).set_duration(scene_duration)
+        # Strict Canvas Lock
+        final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
         
         if i > 0: final_scene = final_scene.crossfadein(0.3)
             
@@ -102,7 +118,7 @@ final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
 # Render & upload
-print("Rendering Final GOD-TIER VIRAL Video...")
+print("Rendering Final 2000/10 VIRAL Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2)
 
 try:
@@ -112,7 +128,7 @@ except: video_link = "Upload Failed"
 
 # Notify Telegram
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
-payload = {"chat_id": chat_id, "message": "👑 Bhai! The PERFECT 1000/10 Video Ready! (Fixed Center Canvas) 🔥", "youtube_url": video_link}
+payload = {"chat_id": chat_id, "message": "👑 Bhai! The 2000/10 GOD TIER Video Ready! (Massive Text + 3D Shadows + Perfect Crop) 🔥", "youtube_url": video_link}
 
 try:
     requests.post(webhook_url, json=payload, timeout=15)
