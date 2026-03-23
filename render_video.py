@@ -2,7 +2,6 @@ import os, requests, json, subprocess
 import moviepy.editor as mpe
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx, ImageClip, ColorClip
 
-# Font name fixed
 HINDI_FONT_FILE = "Hindi.ttf" 
 
 full_text = os.environ.get('FULL_TEXT', 'Ek baar ki baat hai.')
@@ -60,9 +59,9 @@ for i, scene in enumerate(scenes_data):
             txt_clip = TextClip(chunk, fontsize=90, color='yellow', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=5, method='caption', size=(950, None))
             highlight_txt = TextClip(chunk, fontsize=90, color='magenta', font=HINDI_FONT_FILE, method='caption', size=(950, None))
             
+            # Yahan se vfx error wali line hata di gayi hai
             w_block = CompositeVideoClip([txt_clip, highlight_txt.set_duration(0.3).crossfadeout(0.2)])
             w_block = w_block.set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
-            w_block = w_block.vfx.accel_decel(new_duration=duration_per_chunk) 
             
             word_clips.append(w_block)
 
@@ -104,7 +103,7 @@ try:
     video_link = requests.post("https://catbox.moe/user/api.php", files=files).text.strip()
 except: video_link = "Upload Failed"
 
-# Notify Telegram (WITH SAFETY NET)
+# Notify Telegram
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
 payload = {"chat_id": chat_id, "message": "💰 Bhai! 500/10 VIRAL AI Video Ready hai (Dynamic Zoom + Highlighted Text)! 🔥", "youtube_url": video_link}
 
@@ -113,4 +112,3 @@ try:
     print("Success: Message sent to N8N!")
 except Exception as e:
     print(f"Warning: N8N unreachable. Error: {e}")
-    print("Don't worry, video is ready! Use the link above.")
