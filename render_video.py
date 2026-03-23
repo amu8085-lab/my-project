@@ -22,9 +22,11 @@ audio_clips = [voiceover]
 headers = {"Authorization": pexels_key}
 current_time = 0.0
 
+# --- THE AUDIO MIXING FIX ---
+# Volumes ko drastically kam kiya hai taaki wo chubhe nahi, bas 'feel' hon.
 try:
-    whoosh_sfx = AudioFileClip("whoosh.mp3").volumex(0.8)
-    pop_sfx = AudioFileClip("pop.mp3").volumex(1.0)
+    whoosh_sfx = AudioFileClip("whoosh.mp3").volumex(0.25) # 80% se 25% kar diya
+    pop_sfx = AudioFileClip("pop.mp3").volumex(0.15)       # 100% se 15% kar diya
 except:
     whoosh_sfx = pop_sfx = None
 
@@ -78,10 +80,12 @@ for i, scene in enumerate(scenes_data):
             
         video_clips.append(final_scene)
         
+        # Audio Mix Timing
         if whoosh_sfx: audio_clips.append(whoosh_sfx.set_start(current_time))
+        
+        # Pop sound ab sirf har naye sentence/scene ke shuru mein 2 baar bajega, har 2 word par nahi (To prevent headache)
         if pop_sfx:
-            for w_i in range(len(chunks)):
-                audio_clips.append(pop_sfx.set_start(current_time + (w_i * duration_per_chunk)))
+            audio_clips.append(pop_sfx.set_start(current_time + 0.1))
                 
         current_time += scene_duration
         print(f"Scene {i+1} Ready: {keyword}")
@@ -91,19 +95,17 @@ for i, scene in enumerate(scenes_data):
 # Stitch Everything
 final_video = concatenate_videoclips(video_clips, padding=-0.3, method="compose")
 
-# --- THE 4000/10 UPGRADE: RETENTION PROGRESS BAR ---
+# Progress Bar
 final_duration = final_video.duration
-# Create a red bar at the bottom that grows from left to right
 progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
 progress_bar = progress_bar.set_position(lambda t: (-TARGET_W + int(TARGET_W * (t / max(final_duration, 1))), 'bottom'))
 progress_bar = progress_bar.set_duration(final_duration)
 
 final_video = CompositeVideoClip([final_video, progress_bar])
-# --------------------------------------------------
 
-# Add BGM
+# Background Music Mix
 try:
-    bgm = AudioFileClip("bgm.mp3").volumex(0.08)
+    bgm = AudioFileClip("bgm.mp3").volumex(0.04) # BGM ko 8% se 4% par laya gaya hai taaki aawaz clear aaye
     if bgm.duration < final_video.duration: bgm = afx.audio_loop(bgm, duration=final_video.duration)
     else: bgm = bgm.subclip(0, final_video.duration)
     audio_clips.append(bgm)
@@ -113,7 +115,7 @@ final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
 # Render & upload
-print("Rendering Final 4000/10 VIRAL Video...")
+print("Rendering Final AUDIO-MIXED VIRAL Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2)
 
 try:
@@ -123,7 +125,7 @@ except: video_link = "Upload Failed"
 
 # Notify Telegram
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
-payload = {"chat_id": chat_id, "message": "👑 Bhai! 4000/10 Video Ready! (Progress Bar added!) 🔥", "youtube_url": video_link}
+payload = {"chat_id": chat_id, "message": "👑 Bhai! Video Ready! (Cinematic Audio Mix + No Repetitive Noise) 🔥", "youtube_url": video_link}
 
 try:
     requests.post(webhook_url, json=payload, timeout=15)
