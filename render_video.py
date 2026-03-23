@@ -2,8 +2,8 @@ import os, requests, json, subprocess
 import moviepy.editor as mpe
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx, ImageClip, ColorClip
 
-# ZAROORI: Apni upload ki hui Hindi font file ka exact name yahan likho!
-HINDI_FONT_FILE = "Hindi.ttf" # Example: 'NotoSansHindi-Bold.ttf' jaisa filename
+# Font name fixed
+HINDI_FONT_FILE = "Hindi.ttf" 
 
 full_text = os.environ.get('FULL_TEXT', 'Ek baar ki baat hai.')
 chat_id = os.environ.get('CHAT_ID')
@@ -46,37 +46,28 @@ for i, scene in enumerate(scenes_data):
             
         clip = VideoFileClip(vid_path).subclip(0, scene_duration).resize(height=1920, width=1080)
         
-        # --- ---
-        # Very gentle zoom from 100% to 110% over duration to increase retention
+        # Ken Burns Zoom
         clip = clip.resize(lambda t: 1.0 + 0.1 * (t / scene_duration))
         
-        # --- ---
-        # Instead of single sentence, we chunk words for retention. Hormozi Style.
         words = text_line.split(' ')
-        chunk_size = 4 # How many words per "bounce"
-        chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
+        chunk_size = 4 
+        chunks = [' '.join(words[j:j + chunk_size]) for j in range(0, len(words), chunk_size)]
         
         word_clips = []
         duration_per_chunk = scene_duration / len(chunks)
         
         for w_i, chunk in enumerate(chunks):
-            # Create yellow text clip using UPLOADED Hindi Font
             txt_clip = TextClip(chunk, fontsize=90, color='yellow', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=5, method='caption', size=(950, None))
-            
-            # Highlight current chunk in bright magenta/pink for viral effect
             highlight_txt = TextClip(chunk, fontsize=90, color='magenta', font=HINDI_FONT_FILE, method='caption', size=(950, None))
             
-            # Combine regular and highlight (Bouncing animation)
             w_block = CompositeVideoClip([txt_clip, highlight_txt.set_duration(0.3).crossfadeout(0.2)])
             w_block = w_block.set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
-            w_block = w_block.vfx.accel_decel(new_duration=duration_per_chunk) # Gentle bounce
+            w_block = w_block.vfx.accel_decel(new_duration=duration_per_chunk) 
             
             word_clips.append(w_block)
 
-        # Translucent background box for guaranteed readability
         bg_clip = ColorClip(size=(1080, 250), color=(0,0,0)).set_opacity(0.6).set_duration(scene_duration).set_position(('center', 'center'))
         
-        # Combine everything (Centered Horizontally, slightly down)
         txt_composite = CompositeVideoClip([bg_clip] + word_clips).set_duration(scene_duration).set_position(('center', 0.60)) 
         
         final_scene = CompositeVideoClip([clip, txt_composite]).set_duration(scene_duration)
@@ -90,7 +81,7 @@ for i, scene in enumerate(scenes_data):
     except Exception as e:
         print(f"Error on scene {i}: {e}")
 
-# stitch everything together
+# Stitch
 final_video = concatenate_videoclips(video_clips, padding=-0.3, method="compose")
 
 # Add BGM
@@ -113,7 +104,13 @@ try:
     video_link = requests.post("https://catbox.moe/user/api.php", files=files).text.strip()
 except: video_link = "Upload Failed"
 
-# Notify Telegram
+# Notify Telegram (WITH SAFETY NET)
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
-payload = {"chat_id": chat_id, "message": "💰 Bhai! 500/10 "VIRAL" AI Video Ready hai (Dynamic Zoom + Highlighted Text)! 🔥", "youtube_url": video_link}
-requests.post(webhook_url, json=payload, timeout=15)
+payload = {"chat_id": chat_id, "message": "💰 Bhai! 500/10 VIRAL AI Video Ready hai (Dynamic Zoom + Highlighted Text)! 🔥", "youtube_url": video_link}
+
+try:
+    requests.post(webhook_url, json=payload, timeout=15)
+    print("Success: Message sent to N8N!")
+except Exception as e:
+    print(f"Warning: N8N unreachable. Error: {e}")
+    print("Don't worry, video is ready! Use the link above.")
