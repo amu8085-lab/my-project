@@ -46,25 +46,16 @@ for i, scene in enumerate(scenes_data):
         with open(vid_path, "wb") as f:
             f.write(requests.get(video_url).content)
             
-        # --- THE 2000/10 FIX: BULLETPROOF CROP & SCALE ---
         clip = VideoFileClip(vid_path).subclip(0, scene_duration)
-        
-        # Force height to 1920
         clip = clip.resize(height=TARGET_H)
-        # Force width if it's too narrow
         if clip.w < TARGET_W:
             clip = clip.resize(width=TARGET_W)
-        # PERFECT Center Crop
         clip = clip.crop(x_center=clip.w/2, y_center=clip.h/2, width=TARGET_W, height=TARGET_H)
         
-        # Smooth Ken Burns Zoom
         zoomed_clip = clip.resize(lambda t: 1.0 + 0.04 * (t / scene_duration)).set_position(('center', 'center'))
-        
-        # Premium Dark Overlay
-        dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.3).set_position(('center', 'center')).set_duration(scene_duration)
+        dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.35).set_position(('center', 'center')).set_duration(scene_duration)
         
         words = text_line.split(' ')
-        # 2000/10 PACING: Strictly 2 words per pop
         chunk_size = 2 
         chunks = [' '.join(words[j:j + chunk_size]) for j in range(0, len(words), chunk_size)]
         
@@ -74,21 +65,18 @@ for i, scene in enumerate(scenes_data):
         for w_i, chunk in enumerate(chunks):
             current_color = viral_colors[w_i % len(viral_colors)]
             
-            # --- THE 3D SHADOW EFFECT ---
-            # Pehle ek kaala (black) text banaya aur thoda neeche/right shift kiya
-            shadow_txt = TextClip(chunk, fontsize=130, color='black', font=HINDI_FONT_FILE, method='caption', size=(950, None))
-            shadow_txt = shadow_txt.set_position(('center', 'center')).margin(top=10, left=10, opacity=0).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
+            # --- THE 3000/10 FIX: MRBEAST MEGA-STROKE ---
+            # 1. Back Layer: Super thick black outline (18px)
+            bg_txt = TextClip(chunk, fontsize=120, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=18, method='caption', size=(950, None))
+            bg_txt = bg_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
             
-            # Fir main coloured text uske theek upar rakha
-            main_txt = TextClip(chunk, fontsize=130, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=6, method='caption', size=(950, None))
-            txt_pos = main_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
+            # 2. Front Layer: Colored text with thin outline (3px)
+            main_txt = TextClip(chunk, fontsize=120, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3, method='caption', size=(950, None))
+            main_txt = main_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
             
-            # Dono ko merge kar diya
-            word_clips.extend([shadow_txt, txt_pos])
+            word_clips.extend([bg_txt, main_txt])
         
-        # Strict Canvas Lock
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
-        
         if i > 0: final_scene = final_scene.crossfadein(0.3)
             
         video_clips.append(final_scene)
@@ -118,7 +106,7 @@ final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
 # Render & upload
-print("Rendering Final 2000/10 VIRAL Video...")
+print("Rendering Final 3000/10 VIRAL Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2)
 
 try:
@@ -128,7 +116,7 @@ except: video_link = "Upload Failed"
 
 # Notify Telegram
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
-payload = {"chat_id": chat_id, "message": "👑 Bhai! The 2000/10 GOD TIER Video Ready! (Massive Text + 3D Shadows + Perfect Crop) 🔥", "youtube_url": video_link}
+payload = {"chat_id": chat_id, "message": "👑 Bhai! 3000/10 GOD-TIER Video Ready! (Mega-Stroke Text + Emojis) 🔥", "youtube_url": video_link}
 
 try:
     requests.post(webhook_url, json=payload, timeout=15)
