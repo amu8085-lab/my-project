@@ -1,7 +1,7 @@
 import os, requests, json, subprocess
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx
 
-full_text = os.environ.get('FULL_TEXT', 'Hello, this is a test video.')
+full_text = os.environ.get('FULL_TEXT', 'Ek baar ki baat hai.')
 chat_id = os.environ.get('CHAT_ID')
 webhook_url = os.environ.get('WEBHOOK_URL')
 pexels_key = os.environ.get('PEXELS_API_KEY')
@@ -9,10 +9,10 @@ scenes_data = json.loads(os.environ.get('SCENES_DATA', '[]'))
 
 print(f"Total Scenes to render: {len(scenes_data)}")
 
-# 1. FREE Premium Voiceover Generation (Edge TTS)
+# 1. FREE Premium Voiceover (UPDATED FOR HINDI VOICE)
 print("Generating FREE AI Voiceover using Edge TTS...")
-# 'en-US-ChristopherNeural' ek bohot premium aur deep male voice hai.
-subprocess.run(['edge-tts', '--voice', 'en-US-ChristopherNeural', '--text', full_text, '--write-media', 'voiceover.mp3'])
+# 'hi-IN-MadhurNeural' ek premium Hindi male aawaz hai.
+subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', full_text, '--write-media', 'voiceover.mp3'])
 
 voiceover = AudioFileClip("voiceover.mp3")
 total_chars = sum(len(s['text']) for s in scenes_data)
@@ -50,6 +50,7 @@ for i, scene in enumerate(scenes_data):
             
         clip = VideoFileClip(vid_path).subclip(0, scene_duration).resize(height=1920, width=1080)
         
+        # Viral Subtitles
         txt_clip = TextClip(text_line, fontsize=75, color='yellow', font='DejaVu-Sans-Bold', stroke_color='black', stroke_width=4, method='caption', size=(950, None))
         txt_clip = txt_clip.set_position(('center', 'center')).set_start(0.2).set_duration(scene_duration - 0.2)
         
@@ -86,15 +87,19 @@ except:
 final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
-# 5. Render & Upload
+# 5. Render & Upload (Safe Upload Method)
 print("Rendering Final ZERO-COST Viral Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2)
 
 try:
     files = {'reqtype': (None, 'fileupload'), 'fileToUpload': open('final_video.mp4', 'rb')}
-    video_link = requests.post("https://catbox.moe/user/api.php", files=files).text.strip()
-except:
-    video_link = "Upload Failed"
+    upload_res = requests.post("https://catbox.moe/user/api.php", files=files)
+    video_link = upload_res.text.strip()
+    if not video_link.startswith("http"):
+        print(f"Catbox API Error: {video_link}")
+        video_link = "Upload Failed - File too large or Server Blocked"
+except Exception as e:
+    video_link = f"Upload Error: {e}"
 
 # 6. Notify Telegram
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
