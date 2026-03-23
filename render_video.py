@@ -3,7 +3,7 @@ import moviepy.editor as mpe
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx, ImageClip, ColorClip
 
 # ZAROORI: Apni upload ki hui Hindi font file ka exact name yahan likho!
-HINDI_FONT_FILE = "notosanshindi.ttf" # Example: 'NotoSansHindi-Bold.ttf' jaisa filename
+HINDI_FONT_FILE = "Hindi.ttf" # Example: 'NotoSansHindi-Bold.ttf' jaisa filename
 
 full_text = os.environ.get('FULL_TEXT', 'Ek baar ki baat hai.')
 chat_id = os.environ.get('CHAT_ID')
