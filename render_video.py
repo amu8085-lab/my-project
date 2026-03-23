@@ -65,12 +65,9 @@ for i, scene in enumerate(scenes_data):
         for w_i, chunk in enumerate(chunks):
             current_color = viral_colors[w_i % len(viral_colors)]
             
-            # --- THE 3000/10 FIX: MRBEAST MEGA-STROKE ---
-            # 1. Back Layer: Super thick black outline (18px)
             bg_txt = TextClip(chunk, fontsize=120, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=18, method='caption', size=(950, None))
             bg_txt = bg_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
             
-            # 2. Front Layer: Colored text with thin outline (3px)
             main_txt = TextClip(chunk, fontsize=120, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3, method='caption', size=(950, None))
             main_txt = main_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
             
@@ -94,6 +91,16 @@ for i, scene in enumerate(scenes_data):
 # Stitch Everything
 final_video = concatenate_videoclips(video_clips, padding=-0.3, method="compose")
 
+# --- THE 4000/10 UPGRADE: RETENTION PROGRESS BAR ---
+final_duration = final_video.duration
+# Create a red bar at the bottom that grows from left to right
+progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
+progress_bar = progress_bar.set_position(lambda t: (-TARGET_W + int(TARGET_W * (t / max(final_duration, 1))), 'bottom'))
+progress_bar = progress_bar.set_duration(final_duration)
+
+final_video = CompositeVideoClip([final_video, progress_bar])
+# --------------------------------------------------
+
 # Add BGM
 try:
     bgm = AudioFileClip("bgm.mp3").volumex(0.08)
@@ -106,7 +113,7 @@ final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
 # Render & upload
-print("Rendering Final 3000/10 VIRAL Video...")
+print("Rendering Final 4000/10 VIRAL Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2)
 
 try:
@@ -116,7 +123,7 @@ except: video_link = "Upload Failed"
 
 # Notify Telegram
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
-payload = {"chat_id": chat_id, "message": "👑 Bhai! 3000/10 GOD-TIER Video Ready! (Mega-Stroke Text + Emojis) 🔥", "youtube_url": video_link}
+payload = {"chat_id": chat_id, "message": "👑 Bhai! 4000/10 Video Ready! (Progress Bar added!) 🔥", "youtube_url": video_link}
 
 try:
     requests.post(webhook_url, json=payload, timeout=15)
