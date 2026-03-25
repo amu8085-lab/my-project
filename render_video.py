@@ -105,7 +105,7 @@ final_video = CompositeVideoClip([final_video, progress_bar])
 
 # Background Music Mix
 try:
-    bgm = AudioFileClip("bgm.mp3").volumex(0.04) # BGM ko 8% se 4% par laya gaya hai taaki aawaz clear aaye
+    bgm = AudioFileClip("bgm.mp3").volumex(0.10) # BGM ko 8% se 4% par laya gaya hai taaki aawaz clear aaye
     if bgm.duration < final_video.duration: bgm = afx.audio_loop(bgm, duration=final_video.duration)
     else: bgm = bgm.subclip(0, final_video.duration)
     audio_clips.append(bgm)
