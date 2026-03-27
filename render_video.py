@@ -9,6 +9,7 @@ chat_id = os.environ.get('CHAT_ID')
 webhook_url = os.environ.get('WEBHOOK_URL')
 pexels_key = os.environ.get('PEXELS_API_KEY')
 scenes_data = json.loads(os.environ.get('SCENES_DATA', '[]'))
+resume_url = os.environ.get('RESUME_URL') # n8n Wait Node Resume URL
 
 print(f"Total Scenes to render: {len(scenes_data)}")
 
@@ -23,10 +24,9 @@ headers = {"Authorization": pexels_key}
 current_time = 0.0
 
 # --- THE AUDIO MIXING FIX ---
-# Volumes ko drastically kam kiya hai taaki wo chubhe nahi, bas 'feel' hon.
 try:
-    whoosh_sfx = AudioFileClip("whoosh.mp3").volumex(0.25) # 80% se 25% kar diya
-    pop_sfx = AudioFileClip("pop.mp3").volumex(0.15)       # 100% se 15% kar diya
+    whoosh_sfx = AudioFileClip("whoosh.mp3").volumex(0.25)
+    pop_sfx = AudioFileClip("pop.mp3").volumex(0.15)       
 except:
     whoosh_sfx = pop_sfx = None
 
@@ -83,7 +83,6 @@ for i, scene in enumerate(scenes_data):
         # Audio Mix Timing
         if whoosh_sfx: audio_clips.append(whoosh_sfx.set_start(current_time))
         
-        # Pop sound ab sirf har naye sentence/scene ke shuru mein 2 baar bajega, har 2 word par nahi (To prevent headache)
         if pop_sfx:
             audio_clips.append(pop_sfx.set_start(current_time + 0.1))
                 
@@ -105,7 +104,7 @@ final_video = CompositeVideoClip([final_video, progress_bar])
 
 # Background Music Mix
 try:
-    bgm = AudioFileClip("bgm.mp3").volumex(0.10) # BGM ko 8% se 4% par laya gaya hai taaki aawaz clear aaye
+    bgm = AudioFileClip("bgm.mp3").volumex(0.10)
     if bgm.duration < final_video.duration: bgm = afx.audio_loop(bgm, duration=final_video.duration)
     else: bgm = bgm.subclip(0, final_video.duration)
     audio_clips.append(bgm)
@@ -121,16 +120,31 @@ final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_co
 try:
     files = {'reqtype': (None, 'fileupload'), 'fileToUpload': open('final_video.mp4', 'rb')}
     video_link = requests.post("https://catbox.moe/user/api.php", files=files).text.strip()
-except: video_link = "Upload Failed"
+except: 
+    video_link = "Upload Failed"
 
-# Notify Telegram
+# Notify Telegram & Resume n8n Wait Node
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
-payload = {"chat_id": chat_id, "message": "👑 Bhai! Video Ready! (Cinematic Audio Mix + No Repetitive Noise) 🔥", "youtube_url": video_link}
 
+payload = {
+    "chat_id": chat_id, 
+    "message": "👑 Bhai! Video Ready! (Cinematic Audio Mix + No Repetitive Noise) 🔥", 
+    "youtube_url": video_link
+}
+
+# 1. Send status to default webhook (Optional if you still want double notification, or you can remove this block)
 try:
     requests.post(webhook_url, json=payload, timeout=15)
 except Exception as e:
-    print(f"Warning: N8N unreachable. Error: {e}")
+    print(f"Warning: Standard Webhook unreachable. Error: {e}")
 
-
-# Is step ko apne 'Run Python Engine' ke theek neeche lagana hai - name: Send Success Webhook back to n8n run: | curl -X POST "${{ github.event.client_payload.resume_url }}" \ -H "Content-Type: application/json" \ -d '{"body": {"youtube_url": "YAHAN_APNI_VIDEO_KA_DIRECT_LINK_DAALO.mp4"}}'
+# 2. The most critical step: Send POST to Resume URL to unblock n8n Wait Node
+if resume_url:
+    print(f"Resuming n8n workflow at: {resume_url}")
+    try:
+        response = requests.post(resume_url, json={"body": payload}, timeout=15)
+        print(f"n8n Resume Response: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Warning: Failed to resume n8n. Error: {e}")
+else:
+    print("No RESUME_URL provided by n8n. Skipping resume step.")
