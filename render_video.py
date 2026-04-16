@@ -14,7 +14,6 @@ resume_url = os.environ.get('RESUME_URL') # n8n Wait Node Resume URL
 print(f"Total Scenes to render: {len(scenes_data)}")
 
 # 1. FREE AI Voiceover
-# subprocess.run(['edge-tts', '--voice', 'hi-IN-SwaraNeural', '--text', full_text, '--write-media', 'voiceover.mp3'])
 subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', full_text, '--write-media', 'voiceover.mp3'])
 
 voiceover = AudioFileClip("voiceover.mp3")
@@ -77,8 +76,8 @@ for i, scene in enumerate(scenes_data):
             
             word_clips.extend([bg_txt, main_txt])
         
+        # 🌟 FIX: Removed crossfadein for perfect Audio/Video sync (Hard cuts for Shorts)
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
-        if i > 0: final_scene = final_scene.crossfadein(0.3)
             
         video_clips.append(final_scene)
         
@@ -93,8 +92,8 @@ for i, scene in enumerate(scenes_data):
     except Exception as e:
         print(f"Error on scene {i}: {e}")
 
-# Stitch Everything
-final_video = concatenate_videoclips(video_clips, padding=-0.3, method="compose")
+# 🌟 FIX: Removed padding=-0.3 so video doesn't end early
+final_video = concatenate_videoclips(video_clips, method="compose")
 
 # Progress Bar
 final_duration = final_video.duration
@@ -119,11 +118,28 @@ final_video = final_video.set_audio(final_audio)
 print("Rendering Final AUDIO-MIXED VIRAL Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2)
 
+print("Uploading video to cloud...")
+video_link = "Upload Failed"
+
+# 🌟 PRIMARY UPLOAD: TmpFiles.org (Fast & Reliable from GitHub)
 try:
-    files = {'reqtype': (None, 'fileupload'), 'fileToUpload': open('final_video.mp4', 'rb')}
-    video_link = requests.post("https://catbox.moe/user/api.php", files=files).text.strip()
-except: 
-    video_link = "Upload Failed"
+    res = requests.post("https://tmpfiles.org/api/v1/upload", files={'file': open('final_video.mp4', 'rb')})
+    if res.status_code == 200:
+        original_url = res.json()['data']['url']
+        video_link = original_url.replace('tmpfiles.org/', 'tmpfiles.org/dl/')
+except Exception as e:
+    print(f"Tmpfiles failed: {e}")
+
+# 🌟 FALLBACK UPLOAD: Catbox.moe (In case TmpFiles is down)
+if not video_link.startswith("http"):
+    try:
+        data = {'reqtype': 'fileupload'}
+        files = {'fileToUpload': open('final_video.mp4', 'rb')}
+        res = requests.post("https://catbox.moe/user/api.php", data=data, files=files)
+        if res.text.startswith("http"):
+            video_link = res.text.strip()
+    except Exception as e:
+        print(f"Catbox failed: {e}")
 
 # Notify Telegram & Resume n8n Wait Node
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
@@ -134,13 +150,13 @@ payload = {
     "youtube_url": video_link
 }
 
-# 1. Send status to default webhook (Optional if you still want double notification, or you can remove this block)
+# 1. Send status to default webhook
 try:
     requests.post(webhook_url, json=payload, timeout=15)
 except Exception as e:
     print(f"Warning: Standard Webhook unreachable. Error: {e}")
 
-# 2. The most critical step: Send POST to Resume URL to unblock n8n Wait Node
+# 2. The most critical step: Resume n8n Wait Node
 if resume_url:
     print(f"Resuming n8n workflow at: {resume_url}")
     try:
