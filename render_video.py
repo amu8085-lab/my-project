@@ -1,4 +1,4 @@
-import os, requests, json, subprocess
+import os, requests, json, subprocess, time
 import moviepy.editor as mpe
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx, ImageClip, ColorClip
 
@@ -178,10 +178,16 @@ except Exception as e:
 
 if resume_url:
     print(f"Resuming n8n workflow at: {resume_url}")
-    try:
-        response = requests.post(resume_url, json={"body": payload}, timeout=15)
-        print(f"n8n Resume Response: {response.status_code} - {response.text}")
-    except Exception as e:
-        print(f"Warning: Failed to resume n8n. Error: {e}")
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(resume_url, json={"body": payload}, timeout=15)
+            print(f"n8n Resume Response: {response.status_code} - {response.text}")
+            break # Exit the loop if successful
+        except Exception as e:
+            print(f"Warning: Failed to resume n8n on attempt {attempt + 1}. Error: {e}")
+            if attempt < max_retries - 1:
+                print("Retrying in 5 seconds...")
+                time.sleep(5)
 else:
     print("No RESUME_URL provided by n8n. Skipping resume step.")
