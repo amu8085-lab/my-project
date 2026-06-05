@@ -1,4 +1,11 @@
-import os, requests, json, subprocess, time
+import os, requests, json, subprocess, socket
+import requests.packages.urllib3.util.connection as urllib3_cn
+
+# Force Python requests to use IPv4 globally
+def allowed_gai_family():
+    return socket.AF_INET
+urllib3_cn.allowed_gai_family = allowed_gai_family
+
 import moviepy.editor as mpe
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx, ImageClip, ColorClip
 
@@ -6,14 +13,14 @@ HINDI_FONT_FILE = "Hindi.ttf"
 
 full_text = os.environ.get('FULL_TEXT', 'Ek baar ki baat hai.')
 chat_id = os.environ.get('CHAT_ID')
-webhook_url = os.environ.get('WEBHOOK_URL')
 pexels_key = os.environ.get('PEXELS_API_KEY')
 scenes_data = json.loads(os.environ.get('SCENES_DATA', '[]'))
-resume_url = os.environ.get('RESUME_URL') # n8n Wait Node Resume URL
+title = os.environ.get('TITLE', 'Deep Space Mystery #Shorts')
+youtube_description = os.environ.get('YOUTUBE_DESC', 'Discover the mysteries of the universe.')
 
 print(f"Total Scenes to render: {len(scenes_data)}")
 
-# 1. FREE AI Voiceover
+# 1. AI Voiceover - MADHUR (MALE VOICE)
 subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', full_text, '--write-media', 'voiceover.mp3'])
 
 voiceover = AudioFileClip("voiceover.mp3")
@@ -26,25 +33,27 @@ current_time = 0.0
 
 try:
     whoosh_sfx = AudioFileClip("whoosh.mp3").volumex(0.25)
-    pop_sfx = AudioFileClip("pop.mp3").volumex(0.15)       
+    pop_sfx = AudioFileClip("pop.mp3").volumex(0.15)        
 except:
     whoosh_sfx = pop_sfx = None
 
-viral_colors = ['#FFD400', '#00FFFF', '#FFFFFF', '#39FF14'] 
+# Space oriented viral colors
+viral_colors = ['#FFD400', '#00FFFF', '#FFFFFF', '#39FF14']  
 
 # 🌟 SHORTS FORMAT (Vertical 1080x1920)
 TARGET_W, TARGET_H = 1080, 1920
 
 # 2. Process Each Scene
 for i, scene in enumerate(scenes_data):
-    keyword = scene.get('keyword', 'nature')
+    keyword = scene.get('keyword', 'universe')
     text_line = scene.get('text', '')
     scene_duration = voiceover.duration * (len(text_line) / max(total_chars, 1))
     if scene_duration < 1.0: scene_duration = 1.0
     
     try:
-        # Pexels API orientation=portrait for Shorts
-        res = requests.get(f"https://api.pexels.com/videos/search?query={keyword}&per_page=1&orientation=portrait", headers=headers).json()
+        # CLEAN PEXELS API CALL - NO MARKDOWN CORRUPTION ANYWHERE
+        pexels_url = f"https://api.pexels.com/videos/search?query={keyword}&per_page=1&orientation=portrait"
+        res = requests.get(pexels_url, headers=headers).json()
         video_url = res['videos'][0]['video_files'][0]['link']
         
         vid_path = f"vid_{i}.mp4"
@@ -79,7 +88,6 @@ for i, scene in enumerate(scenes_data):
             
             word_clips.extend([bg_txt, main_txt])
         
-        # Hard cut without crossfade for perfect sync
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
             
         video_clips.append(final_scene)
@@ -115,79 +123,54 @@ except: pass
 final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
-# 🌟 MAGICAL FIX: FAST RENDER & COMPRESSED SIZE
+# 🌟 FAST RENDER & COMPRESSED SIZE
 print("Rendering Final COMPRESSED SHORTS Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="1500k", preset="ultrafast")
 
-print("Starting 5-Layer Indestructible Upload System...")
+print("Starting Upload System...")
 video_link = "Upload Failed"
 
-# LAYER 1: 0x0.st
+# UPLOAD LAYERS
 if not video_link.startswith("http"):
     try:
-        print("Trying 0x0.st API...")
         res = requests.post("https://0x0.st", files={'file': open('final_video.mp4', 'rb')}, timeout=600)
         if res.text.startswith("http"): video_link = res.text.strip()
-    except Exception as e: print(f"0x0.st failed: {e}")
+    except Exception: pass
 
-# LAYER 2: Uguu.se
 if not video_link.startswith("http"):
     try:
-        print("Trying Uguu.se API...")
         res = requests.post("https://uguu.se/upload.php", files={'files[]': open('final_video.mp4', 'rb')}, timeout=600)
         if res.status_code == 200: video_link = res.json()['files'][0]['url']
-    except Exception as e: print(f"Uguu.se failed: {e}")
+    except Exception: pass
 
-# LAYER 3: Tmpfiles.org
 if not video_link.startswith("http"):
     try:
-        print("Trying Tmpfiles API...")
         res = requests.post("https://tmpfiles.org/api/v1/upload", files={'file': open('final_video.mp4', 'rb')}, timeout=600)
         if res.status_code == 200: video_link = res.json()['data']['url'].replace('tmpfiles.org/', 'tmpfiles.org/dl/')
-    except Exception as e: print(f"Tmpfiles failed: {e}")
+    except Exception: pass
 
-# LAYER 4: Catbox.moe
 if not video_link.startswith("http"):
     try:
-        print("Trying Catbox API...")
         res = requests.post("https://catbox.moe/user/api.php", data={'reqtype': 'fileupload'}, files={'fileToUpload': open('final_video.mp4', 'rb')}, timeout=600)
         if res.text.startswith("http"): video_link = res.text.strip()
-    except Exception as e: print(f"Catbox failed: {e}")
+    except Exception: pass
 
-# LAYER 5: Transfer.sh
-if not video_link.startswith("http"):
-    try:
-        print("Trying Transfer.sh API...")
-        res = requests.put("https://transfer.sh/final_video.mp4", data=open('final_video.mp4', 'rb'), timeout=600)
-        if res.text.startswith("http"): video_link = res.text.strip()
-    except Exception as e: print(f"Transfer.sh failed: {e}")
 
-# Notify Telegram & Resume n8n Wait Node
+# 🌟 FINAL FIX: DIRECT TELEGRAM BOT INTEGRATION
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
 
-payload = {
-    "chat_id": chat_id, 
-    "message": "👑 Bhai! Shorts Video Ready! 🔥", 
-    "youtube_url": video_link
-}
+# NAYA TOKEN YAHAN ADD HO GAYA HAI
+BOT_TOKEN = "8832893599:AAEk3jxy3r7HvQRn6GTIXUtj0w1FgL0SYWs" 
+
+message_text = f"READY_TO_UPLOAD\n{video_link}\n{title}\n{youtube_description}"
 
 try:
-    requests.post(webhook_url, json=payload, timeout=15)
+    telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": chat_id, 
+        "text": message_text
+    }
+    response = requests.post(telegram_url, json=payload)
+    print(f"✅ Webhook bypassed! Sent video details directly to Telegram! Status: {response.status_code}")
 except Exception as e:
-    print(f"Warning: Standard Webhook unreachable. Error: {e}")
-
-if resume_url:
-    print(f"Resuming n8n workflow at: {resume_url}")
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(resume_url, json={"body": payload}, timeout=15)
-            print(f"n8n Resume Response: {response.status_code} - {response.text}")
-            break # Exit the loop if successful
-        except Exception as e:
-            print(f"Warning: Failed to resume n8n on attempt {attempt + 1}. Error: {e}")
-            if attempt < max_retries - 1:
-                print("Retrying in 5 seconds...")
-                time.sleep(5)
-else:
-    print("No RESUME_URL provided by n8n. Skipping resume step.")
+    print(f"❌ Failed to send Telegram alert: {e}")
